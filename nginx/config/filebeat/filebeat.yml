@@ -1,0 +1,14 @@
+filebeat:
+  inputs:
+    -
+      paths:
+        - /var/log/nginx/access.log
+      type: log
+      document_type: nginx_access
+    -
+      paths:
+        - /var/log/nginx/error.log
+      type: log
+      document_type: nginx_error
+output.logstash:
+    hosts: ["logstash01:5044"]

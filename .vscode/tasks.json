@@ -1,0 +1,69 @@
+{
+  // See https://go.microsoft.com/fwlink/?LinkId=733558
+  // for the documentation about the tasks.json format
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "docker-build",
+      "type": "shell",
+      "command": "docker-compose",
+      "args": [
+        "up",
+        "-d",
+        "--build",
+        "--force-recreate"
+      ],
+      "isBackground": false
+    },
+    {
+      "label": "restart-filebeat",
+      "type": "shell",
+      "command": "docker",
+      "args": [
+        "exec",
+        "-it",
+        "nginx01",
+        "/etc/init.d/filebeat",
+        "restart"
+      ],
+      "dependsOn": [
+        "docker-build"
+      ],
+      "isBackground": true
+    },
+    {
+      "label": "virtual-env",
+      "type": "shell",
+      "command": "virtualenv",
+      "args": [
+        "-p",
+        "C:\\Python37\\python.exe",
+        "${workspaceFolder}\\.venv"
+      ],
+      "isBackground": true
+    },
+    {
+      "label": "active-env",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-File",
+        "${workspaceFolder}\\.venv\\Scripts\\activate.ps1"
+      ],
+      "isBackground": true,
+    },
+    {
+      "label": "pip-install",
+      "type": "shell",
+      "command": "${workspaceFolder}\\.venv\\Scripts\\pip.exe",
+      "args": [
+        "install",
+        "requests"
+      ],
+      "isBackground": true,
+      "dependsOn": [
+        "active-env"
+      ]
+    }
+  ]
+}

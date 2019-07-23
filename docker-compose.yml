@@ -1,0 +1,148 @@
+---
+# compose 3.7 / docker version needed -> 18.06.0+
+
+version: '3.7'
+
+services:
+
+  elasticsearch01:
+    hostname: elasticsearch01
+    container_name: elasticsearch01
+    build:
+      context: elasticsearch/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    environment:
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - ./elasticsearch/elasticsearch.yml:/usr/share/elasticsearch/elasticsearch.yml:ro
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+        elk:
+          aliases: 
+            - elasticsearch_net
+
+  elasticsearch02:
+    hostname: elasticsearch02
+    container_name: elasticsearch02
+    build:
+      context: elasticsearch/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    environment:
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - ./elasticsearch/elasticsearch2.yml:/usr/share/elasticsearch/elasticsearch2.yml:ro
+    networks:
+        elk:
+          aliases: 
+            - elasticsearch_net2
+
+  logstash01:
+    hostname: logstash01
+    container_name: logstash01
+    build:
+      context: logstash/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - ./logstash/logstash.yml:/usr/share/logstash/logstash.yml:ro
+      - ./logstash/pipeline/:/usr/share/logstash/pipeline/:ro
+    ports:
+      - "9600:9600"
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      elk:
+        aliases: 
+          - logstash_net
+    depends_on:
+      - elasticsearch01
+      - elasticsearch02
+
+  kibana01:
+    hostname: kibana01
+    container_name: kibana01
+    build:
+      context: kibana/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - ./kibana/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+    ports:
+      - "5601:5601"
+    networks:
+        elk:
+          aliases: 
+            - kibana_net
+    depends_on:
+      - elasticsearch01
+      - elasticsearch02
+
+  nginx01:
+    hostname: nginx01
+    container_name: nginx01
+    build: 
+      context: nginx/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    ports:
+    - "3000:80"
+    networks:
+      elk:
+        aliases:
+          - nginx_server
+    depends_on:
+      - elasticsearch01
+      - elasticsearch02
+      - logstash01
+
+  flaskapp01:
+    hostname: flaskapp01
+    container_name: flaskapp01
+    build: 
+      context: flaskapp/
+      args: 
+        FLASK_PORT: $FLASK_PORT
+    environment: 
+      - FLASK_APP=/flask_app/app.py
+      - APPLICATION_ROOT=/flask_app/
+      - FLASK_ENV=development
+      - PYTHONWARNINGS=ignore
+    ports:
+      - "$FLASK_PORT:$FLASK_PORT"
+    networks:
+      elk:
+        aliases:
+          - flaskapp_server
+
+#  postgresql01:
+#    hostname: postgresql01
+#    container_name: postgresql01
+#    image: postgres
+#    volumes:
+#      - data:/var/lib/postgresql/data
+
+networks:
+  elk:
+    driver: bridge
+
+volumes:
+  data:
+    external: false
